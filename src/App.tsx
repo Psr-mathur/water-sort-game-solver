@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { findSolution } from './logic/solver';
-import { Move } from './types';
+import { BottleState, Move } from './types';
 import ColorPicker from './components/color-picker';
 import Bottle from './components/bottle';
 import SolutionSteps from './components/solution-steps';
@@ -13,14 +13,17 @@ const COLORS = [
 
 const App: React.FC = () => {
   const [bottleCount, setBottleCount] = useState<number>(5);
-  const [bottles, setBottles] = useState<string[][]>([]);
+  const [bottles, setBottles] = useState<BottleState[]>([]);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [solution, setSolution] = useState<Move[]>([]);
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [error, setError] = useState<string>('');
 
   const setupBottles = () => {
-    const initialBottles: string[][] = Array.from({ length: bottleCount }, () => []);
+    const initialBottles: BottleState[] = Array.from({ length: bottleCount }, () => ({
+      colors: [],
+      capacity: 4
+    }));
     setBottles(initialBottles);
     setSolution([]);
     setCurrentStep(0);
@@ -32,15 +35,18 @@ const App: React.FC = () => {
   const handleBottleClick = (index: number) => {
     if (!selectedColor) return;
     setBottles(prev => {
-      if (prev[index].length >= 4) return prev;
-      return prev.map((b, i) => i === index ? [...b, selectedColor] : b);
+      if (prev[index].colors.length >= prev[index].capacity) return prev;
+      return prev.map((b, i) =>
+        i === index ? { ...b, colors: [...b.colors, selectedColor] } : b
+      );
     });
   };
 
   const solvePuzzle = () => {
     setError('');
     try {
-      const sol = findSolution(bottles);
+      const bottleColorsOnly = bottles.map(b => b.colors);
+      const sol = findSolution(bottleColorsOnly);
       setSolution(sol);
       setCurrentStep(0);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -53,19 +59,25 @@ const App: React.FC = () => {
     if (currentStep < solution.length) {
       const move = solution[currentStep];
       setBottles(prev => {
-        const newState = JSON.parse(JSON.stringify(prev)) as string[][];
+        const newState: BottleState[] = JSON.parse(JSON.stringify(prev));
         const { from, to } = move;
-        const color = newState[from][newState[from].length - 1];
+        const fromBottle = newState[from];
+        const toBottle = newState[to];
+        const color = fromBottle.colors[fromBottle.colors.length - 1];
         let count = 0;
-        for (let i = newState[from].length - 1; i >= 0; i--) {
-          if (newState[from][i] === color) count++;
+
+        for (let i = fromBottle.colors.length - 1; i >= 0; i--) {
+          if (fromBottle.colors[i] === color) count++;
           else break;
         }
-        const availableSpace = 4 - newState[to].length;
+
+        const availableSpace = toBottle.capacity - toBottle.colors.length;
         const transferAmount = Math.min(count, availableSpace);
+
         for (let i = 0; i < transferAmount; i++) {
-          newState[to].push(newState[from].pop()!);
+          toBottle.colors.push(fromBottle.colors.pop()!);
         }
+
         return newState;
       });
       setCurrentStep(prev => prev + 1);
@@ -92,8 +104,8 @@ const App: React.FC = () => {
         <div>
           <p>Click a bottle, then click a color to fill from bottom up</p>
           <div id="bottles-container">
-            {bottles.map((colors, index) => (
-              <Bottle key={index} index={index} colors={colors} onClick={handleBottleClick} />
+            {bottles.map((bottle, index) => (
+              <Bottle key={index} index={index} colors={bottle.colors} onClick={handleBottleClick} />
             ))}
           </div>
         </div>

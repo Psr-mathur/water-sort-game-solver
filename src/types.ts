@@ -4,3 +4,8 @@ export type Move = {
 };
 
 export type State = string[][];
+
+export interface BottleState {
+  colors: string[];
+  capacity: number;
+}

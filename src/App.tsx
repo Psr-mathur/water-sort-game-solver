@@ -8,7 +8,14 @@ import SolutionSteps from './components/solution-steps';
 const COLORS = [
   '#FF0000', '#00FF00', '#0000FF', '#FFFF00',
   '#FF00FF', '#00FFFF', '#FFA500', '#A52A2A',
-  '#808080', '#008000', '#000080', '#800080'
+  '#808080', '#008000', '#000080', '#800080', // Existing colors
+  '#9370DB', // Purple (Medium Purple)
+  '#87CEEB', // Sky Blue
+  '#FF1493', // Deep Pink
+  '#FFD700', // Gold
+  '#7CFC00', // Lawn Green
+  '#4682B4', // Steel Blue
+  '#DC143C', // Crimson
 ];
 
 const App: React.FC = () => {

@@ -1,27 +1,38 @@
 import React, { useState } from 'react';
 import { findSolution } from './logic/solver';
-import { BottleState, Move } from './types';
+import { BottleState, History, Move } from './types';
 import ColorPicker from './components/color-picker';
 import Bottle from './components/bottle';
 import SolutionSteps from './components/solution-steps';
 
 const COLORS = [
-  '#FF0000', '#00FF00', '#0000FF', '#FFFF00',
-  '#FF00FF', '#00FFFF', '#FFA500', '#A52A2A',
-  '#808080', '#008000', '#000080', '#800080', // Existing colors
-  '#9370DB', // Purple (Medium Purple)
-  '#87CEEB', // Sky Blue
-  '#FF1493', // Deep Pink
-  '#FFD700', // Gold
-  '#7CFC00', // Lawn Green
-  '#4682B4', // Steel Blue
-  '#DC143C', // Crimson
+  "#FF0000", // Red
+  "#87CEEB", // Sky Blue
+  "#0000FF", // Blue
+  "#4B0082", // Indigo
+  "#008000", // Green
+  "#00FF00", // Lime
+  "#FFFF00", // Yellow
+  "#FFA500", // Orange
+  "#800080", // Purple
+  "#FFC0CB", // Pink
+  "#00FFFF", // Cyan
+  "#A52A2A", // Brown
+  "#808080", // Gray
+  "#008080", // Teal
+  "#800000", // Maroon
+  "#FF1493", // Pink
+  '#FF00FF', // Magenta
 ];
 
 const App: React.FC = () => {
   const [bottleCount, setBottleCount] = useState<number>(5);
   const [bottles, setBottles] = useState<BottleState[]>([]);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [history, setHistory] = useState<History>({
+    data: [bottles],
+    currIndex: 0
+  });
   const [solution, setSolution] = useState<Move[]>([]);
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [error, setError] = useState<string>('');
@@ -32,6 +43,10 @@ const App: React.FC = () => {
       capacity: 4
     }));
     setBottles(initialBottles);
+    setHistory({
+      data: [structuredClone(initialBottles)],
+      currIndex: 0
+    });
     setSolution([]);
     setCurrentStep(0);
     setError('');
@@ -40,13 +55,26 @@ const App: React.FC = () => {
   const reset = () => setupBottles();
 
   const handleBottleClick = (index: number) => {
-    if (!selectedColor) return;
-    setBottles(prev => {
-      if (prev[index].colors.length >= prev[index].capacity) return prev;
-      return prev.map((b, i) =>
-        i === index ? { ...b, colors: [...b.colors, selectedColor] } : b
-      );
+    if (!selectedColor) {
+      setError('Please select a color first!');
+      return;
+    };
+    if (bottles[index].colors.length >= bottles[index].capacity) {
+      setError('This bottle is already full!');
+      return;
+    }
+    const newBottles = bottles.map((b, i) => {
+      if (i === index) {
+        return { ...b, colors: [...b.colors, selectedColor] };
+      }
+      return b;
     });
+    setBottles(newBottles);
+    setHistory(prev => {
+      const newHistoryData = [...prev.data.slice(0, prev.currIndex + 1), newBottles];
+      return { ...prev, data: newHistoryData, currIndex: newHistoryData.length - 1 };
+    });
+    setError('');
   };
 
   const solvePuzzle = () => {
@@ -91,6 +119,20 @@ const App: React.FC = () => {
     }
   };
 
+  const handleUndo = () => {
+    if (history.currIndex > 0) {
+      setBottles(history.data[history.currIndex - 1]);
+      setHistory(prev => ({ ...prev, currIndex: prev.currIndex - 1 }));
+    }
+  };
+
+  const handleRedo = () => {
+    if (history.currIndex < history.data.length - 1) {
+      setBottles(history.data[history.currIndex + 1]);
+      setHistory(prev => ({ ...prev, currIndex: prev.currIndex + 1 }));
+    }
+  };
+
   return (
     <div>
       <h1>Water Sort Puzzle Solver</h1>
@@ -107,9 +149,26 @@ const App: React.FC = () => {
           />
           <button className="move-btn" onClick={setupBottles}>Setup Bottles</button>
         </div>
+        {/** UNDO REDO */}
+        <div className="undo-redo">
+          <button
+            className="move-btn"
+            onClick={handleUndo}
+            disabled={history.currIndex === 0}
+          >
+            Undo
+          </button>
+          <button
+            className="move-btn"
+            onClick={handleRedo}
+            disabled={history.currIndex >= history.data.length - 1}
+          >
+            Redo
+          </button>
+        </div>
         <ColorPicker colors={COLORS} selectedColor={selectedColor} onSelect={setSelectedColor} />
         <div>
-          <p>Click a bottle, then click a color to fill from bottom up</p>
+          <p>Click a Color, then click a Bottle to fill from bottom up</p>
           <div id="bottles-container">
             {bottles.map((bottle, index) => (
               <Bottle key={index} index={index} colors={bottle.colors} onClick={handleBottleClick} />

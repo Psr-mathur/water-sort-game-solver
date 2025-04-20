@@ -35,6 +35,7 @@ const App: React.FC = () => {
   });
   const [solution, setSolution] = useState<Move[]>([]);
   const [currentStep, setCurrentStep] = useState<number>(0);
+  const [isSolving, setIsSolving] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
 
   const setupBottles = () => {
@@ -79,15 +80,20 @@ const App: React.FC = () => {
 
   const solvePuzzle = () => {
     setError('');
-    try {
-      const bottleColorsOnly = bottles.map(b => b.colors);
-      const sol = findSolution(bottleColorsOnly);
-      setSolution(sol);
-      setCurrentStep(0);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (e: any) {
-      setError(e.message);
-    }
+    setIsSolving(true);
+    setTimeout(() => {
+      try {
+        const bottleColorsOnly = bottles.map(b => b.colors);
+        const sol = findSolution(bottleColorsOnly);
+        setSolution(sol);
+        setCurrentStep(0);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setIsSolving(false);
+      }
+    }, 0);
   };
 
   const nextAutoSolveStep = () => {
@@ -135,6 +141,7 @@ const App: React.FC = () => {
 
   return (
     <div>
+      {isSolving && <div className="loader"><span className='spinner' /></div>}
       <h1>Water Sort Puzzle Solver</h1>
       <div className="controls">
         <div>

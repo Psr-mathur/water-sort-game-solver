@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
-import { findSolution } from './logic/solver';
+
+import React, { useEffect, useState } from 'react';
 import { BottleState, History, Move } from './types';
 import ColorPicker from './components/color-picker';
 import Bottle from './components/bottle';
 import SolutionSteps from './components/solution-steps';
+import { loadPyodide, PyodideInterface } from 'pyodide';
+import { convertToJsObjects, generatePythonCode } from './utils';
+
 
 const COLORS = [
   "#FF0000", // Red
@@ -25,6 +28,7 @@ const COLORS = [
   '#FF00FF', // Magenta
 ];
 
+
 const App: React.FC = () => {
   const [bottleCount, setBottleCount] = useState<number>(5);
   const [bottles, setBottles] = useState<BottleState[]>([]);
@@ -37,6 +41,7 @@ const App: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [isSolving, setIsSolving] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  const [pyodide, setPyodide] = useState<PyodideInterface>();
 
   const setupBottles = () => {
     const initialBottles: BottleState[] = Array.from({ length: bottleCount }, () => ({
@@ -78,24 +83,41 @@ const App: React.FC = () => {
     setError('');
   };
 
-  const solvePuzzle = () => {
+  const loadPyodideAndRun = async () => {
+    const pyodideInstance = await loadPyodide({
+      indexURL: "https://cdn.jsdelivr.net/pyodide/v0.27.5/full/"
+    });
+    setPyodide(pyodideInstance);
+  };
+
+  useEffect(() => {
+    loadPyodideAndRun();
+  }, []);
+
+  const solvePuzzle = async () => {
+    if (!pyodide) return alert('Please load Pyodide first!');
     setError('');
     setIsSolving(true);
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
         const bottleColorsOnly = bottles.map(b => b.colors);
-        const sol = findSolution(bottleColorsOnly);
-        setSolution(sol);
+        const pythonCode = await generatePythonCode(bottleColorsOnly);
+        const result = await pyodide.runPythonAsync(pythonCode);
+        const converted = result.toJs({ dict_converter: Object });
+        const moves = await convertToJsObjects(converted);
+        result.destroy();
+        setSolution(moves);
         setCurrentStep(0);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (e: any) {
-        setError(e.message);
+      } catch (error) {
+        console.error(error);
+        setError('An error occurred while solving the puzzle');
       } finally {
         setIsSolving(false);
       }
     }, 0);
   };
 
+  // Execute the next step of the solution
   const nextAutoSolveStep = () => {
     if (currentStep < solution.length) {
       const move = solution[currentStep];
@@ -125,6 +147,7 @@ const App: React.FC = () => {
     }
   };
 
+  // Handle undo and redo actions
   const handleUndo = () => {
     if (history.currIndex > 0) {
       setBottles(history.data[history.currIndex - 1]);
@@ -156,7 +179,6 @@ const App: React.FC = () => {
           />
           <button className="move-btn" onClick={setupBottles}>Setup Bottles</button>
         </div>
-        {/** UNDO REDO */}
         <div className="undo-redo">
           <button
             className="move-btn"
@@ -202,5 +224,6 @@ const App: React.FC = () => {
     </div>
   );
 };
+
 
 export default App;

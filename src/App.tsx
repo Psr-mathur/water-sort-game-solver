@@ -5,28 +5,7 @@ import ColorPicker from './components/color-picker';
 import Bottle from './components/bottle';
 import SolutionSteps from './components/solution-steps';
 import { loadPyodide, PyodideInterface } from 'pyodide';
-import { convertToJsObjects, generatePythonCode } from './utils';
-
-
-const COLORS = [
-  "#FF0000", // Red
-  "#87CEEB", // Sky Blue
-  "#0000FF", // Blue
-  "#4B0082", // Indigo
-  "#008000", // Green
-  "#00FF00", // Lime
-  "#FFFF00", // Yellow
-  "#FFA500", // Orange
-  "#800080", // Purple
-  "#FFC0CB", // Pink
-  "#00FFFF", // Cyan
-  "#A52A2A", // Brown
-  "#808080", // Gray
-  "#008080", // Teal
-  "#800000", // Maroon
-  "#FF1493", // Pink
-  '#FF00FF', // Magenta
-];
+import { COLORS, convertToJsObjects, generatePythonCodeWithLockAndPartiallyLocked } from './utils';
 
 
 const App: React.FC = () => {
@@ -101,7 +80,7 @@ const App: React.FC = () => {
     setTimeout(async () => {
       try {
         const bottleColorsOnly = bottles.map(b => b.colors);
-        const pythonCode = await generatePythonCode(bottleColorsOnly);
+        const pythonCode = await generatePythonCodeWithLockAndPartiallyLocked(bottleColorsOnly);
         const result = await pyodide.runPythonAsync(pythonCode);
         const converted = result.toJs({ dict_converter: Object });
         const moves = await convertToJsObjects(converted);
